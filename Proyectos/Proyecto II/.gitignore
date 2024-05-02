@@ -1,0 +1,6 @@
+data/**
+.vscode/
+wandb/**
+runs/**
+models/**
+maps/**

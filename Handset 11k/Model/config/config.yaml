@@ -1,0 +1,8 @@
+defaults:
+  - train : experiment
+  - model : model
+  - _self_
+
+dataset:
+  DATA_DIR : ${hydra:runtime.cwd}/Hands_Detailed
+  

@@ -1,0 +1,11 @@
+defaults:
+  - train : experiment_2
+  - model : model_1
+  - _self_
+
+dataset:
+  DATA_DIR : ${hydra:runtime.cwd}/../dataset/
+  
+  
+  
+  

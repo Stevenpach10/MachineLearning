@@ -1,0 +1,5 @@
+lightning_logs/
+dataset/
+wand_logs/
+tb_logs/
+wandb/

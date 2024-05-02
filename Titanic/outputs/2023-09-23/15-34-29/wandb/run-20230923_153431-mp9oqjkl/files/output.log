@@ -1,0 +1,142 @@
+Using bfloat16 Automatic Mixed Precision (AMP)
+/home/steven/.local/lib/python3.10/site-packages/torch/cuda/__init__.py:546: UserWarning: Can't initialize NVML
+  warnings.warn("Can't initialize NVML")
+GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+IPU available: False, using: 0 IPUs
+HPU available: False, using: 0 HPUs
+/home/steven/.local/lib/python3.10/site-packages/pytorch_lightning/trainer/configuration_validator.py:71: PossibleUserWarning: You defined a `validation_step` but have no `val_dataloader`. Skipping val loop.
+  rank_zero_warn(
+  | Name          | Type           | Params
+-------------------------------------------------
+0 | fc1           | Linear         | 400
+1 | fc2           | Linear         | 7.7 K
+2 | fc3           | Linear         | 151
+3 | dropout1      | Dropout        | 0
+4 | dropout2      | Dropout        | 0
+5 | loss_function | BCELoss        | 0
+6 | accuracy      | BinaryAccuracy | 0
+7 | f1            | BinaryF1Score  | 0
+8 | auROC         | BinaryAUROC    | 0
+-------------------------------------------------
+8.2 K     Trainable params
+0         Non-trainable params
+8.2 K     Total params
+0.033     Total estimated model params size (MB)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Epoch 49: 100%|████████████████████████████████████████████████████████████████████████| 56/56 [00:04<00:00, 13.67it/s, v_num=qjkl, loss=0.425, train_acc=0.824, train_f1=0.750, auROC=0.864]
+`Trainer.fit` stopped: `max_epochs=50` reached.
+
+Testing DataLoader 0:  37%|████████████████████████████████████████████████▏                                                                                 | 10/27 [00:02<00:05,  3.38it/s]
+/home/steven/.local/lib/python3.10/site-packages/torchmetrics/utilities/prints.py:43: UserWarning: No positive samples in targets, true positive value should be meaningless. Returning zero tensor in true positive score
+Testing DataLoader 0: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 27/27 [00:03<00:00,  7.35it/s]
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃[1m        Test metric        [22m┃[1m       DataLoader 0        [22m┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│[36m       test_accuracy       [39m│[35m    0.9040767550468445     [39m│
+│[36m        test_auROC         [39m│[35m    0.9450468420982361     [39m│
+│[36m       test_f1_score       [39m│[35m    0.8610126972198486     [39m│
+│[36m         test_loss         [39m│[35m     0.323553204536438     [39m│
+└───────────────────────────┴───────────────────────────┘
+Success!

@@ -1,0 +1,13 @@
+train:
+  LEARNING_RATE: 0.001
+  BATCH_SIZE: 16
+  NUM_EPOCHS: 50
+  PRECISION: bf16-mixed
+  NUM_WORKERS: 12
+  ACCELERATOR: cpu
+  LOG_EVERY_STEPS: 5
+model:
+  INPUT_SIZE: 7
+  NUM_CLASSES: 1
+dataset:
+  DATA_DIR: ${hydra:runtime.cwd}/Preprocess/
