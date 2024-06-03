@@ -1,0 +1,5 @@
+data/
+config/
+outputs/
+wandb/
+*.ckpt
