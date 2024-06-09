@@ -18,6 +18,30 @@ from torch.optim.lr_scheduler import StepLR
 import wandb
 from torchvision.utils import make_grid
 
+from config.config import Train
+
+class InceptionModule(pl.LightningModule):
+    def __init__(self, in_channels_block, out_channels_conv):
+        super().__init__()
+        self.in_channels_block = in_channels_block
+        self.out_channels_conv = sum(out_channels_conv[:])
+        
+        self.conv1 = nn.Conv2d(in_channels=in_channels_block, out_channels=out_channels_conv[0], kernel_size=1, stride=1, padding=0)
+        self.conv3 = nn.Conv2d(in_channels=in_channels_block, out_channels=out_channels_conv[1], kernel_size=3, stride=1, padding=1)
+        self.conv5= nn.Conv2d(in_channels=in_channels_block, out_channels=out_channels_conv[2], kernel_size=5, stride=1, padding=2)
+    
+       
+    
+    def forward(self, x):
+        output1 = self.conv1(x)
+        output3 = self.conv3(x)
+        output5 = self.conv5(x)
+
+        x = torch.cat((output1, output3, output5), dim=1)
+        return x
+
+        
+
 
 class DeconvolutionalBlock(pl.LightningModule):
     def __init__(self, in_channels_block, out_channels_block, kernel_size=3, stride=1, padding=1):
@@ -41,15 +65,17 @@ class DeconvolutionalBlock(pl.LightningModule):
         return x
     
 class ConvolutionalBlock(pl.LightningModule):
-    def __init__(self, in_channels_block, out_channels_block, kernel_size=3, stride=1, padding=1):
+    def __init__(self, in_channels_block, out_channels_conv, kernel_size=3, stride=1, padding=1):
         super().__init__()
 
         self.in_channels_block = in_channels_block
-        self.out_channels_block = out_channels_block
+        self.out_channels_conv = out_channels_conv
 
-        self.conv1 = nn.Conv2d(in_channels=in_channels_block, out_channels=self.out_channels_block, kernel_size=kernel_size, stride=stride, padding=padding)
-        self.conv2 = nn.Conv2d(in_channels=self.out_channels_block, out_channels=self.out_channels_block, kernel_size=kernel_size, stride=stride, padding=padding)
-
+        self.conv1 = nn.Conv2d(in_channels=in_channels_block, out_channels=self.out_channels_conv, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.conv2 = nn.Conv2d(in_channels=self.out_channels_conv, out_channels=self.out_channels_conv, kernel_size=kernel_size, stride=stride, padding=padding)
+        
+        self.out_channels_conv = self.out_channels_conv
+        self.out_channels_block = self.out_channels_conv
 
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         self.loss_fn = nn.MSELoss()
@@ -62,21 +88,30 @@ class ConvolutionalBlock(pl.LightningModule):
         return x
     
 class Autoencoder(pl.LightningModule):
-    def __init__(self, input_channels, num_classes, learning_rate):
+    def __init__(self, input_channels, out_channels, training_parameters: Train, use_inception_module = False):
         super(Autoencoder, self).__init__()
-        self.num_classes = num_classes
-        self.learning_rate = learning_rate
+        self.num_classes = out_channels
+        self.training_parameters = training_parameters
+        self.use_inception_module = use_inception_module
 
-        self.conv_block = ConvolutionalBlock(in_channels_block=input_channels, out_channels_block=16)
-        self.conv_block2 = ConvolutionalBlock(in_channels_block=self.conv_block.out_channels_block, out_channels_block=32)
-        self.conv_block3 = ConvolutionalBlock(in_channels_block=self.conv_block2.out_channels_block, out_channels_block=64)
-        self.conv_block4 = ConvolutionalBlock(in_channels_block=self.conv_block3.out_channels_block, out_channels_block=128)
+        
+
+        self.conv_block = ConvolutionalBlock(in_channels_block=input_channels, out_channels_conv=16)
+        self.conv_block2 = ConvolutionalBlock(in_channels_block=self.conv_block.out_channels_block, out_channels_conv=32)
+        self.conv_block3 = ConvolutionalBlock(in_channels_block=self.conv_block2.out_channels_block, out_channels_conv=64)
+        #self.conv_block4 = ConvolutionalBlock(in_channels_block=self.conv_block3.out_channels_block, out_channels_conv=64)
+        #self.conv_block5 = ConvolutionalBlock(in_channels_block=self.conv_block4.out_channels_block, out_channels_conv=128)
+        
+        if use_inception_module:
+            self.inceptionModule = InceptionModule(self.conv_block4.out_channels_block, [8,32,8])
+            self.inceptionModule2 = InceptionModule(self.inceptionModule.out_channels_conv, [8,32,8])
 
         # Input channel by 2 due to the skip connections
-        self.deconv_block4 = DeconvolutionalBlock(in_channels_block=self.conv_block4.out_channels_block*2, out_channels_block=64)
-        self.deconv_block3 = DeconvolutionalBlock(in_channels_block=self.deconv_block4.out_channels_block*2, out_channels_block=32)
-        self.deconv_block2 = DeconvolutionalBlock(in_channels_block=self.deconv_block3.out_channels_block*2, out_channels_block=16)
-        self.deconv_block = DeconvolutionalBlock(in_channels_block=self.deconv_block2.out_channels_block*2, out_channels_block=input_channels)
+        #self.deconv_block5 = DeconvolutionalBlock(in_channels_block=self.conv_block5.out_channels_block*2, out_channels_block=self.conv_block4.out_channels_block)
+        #self.deconv_block4 = DeconvolutionalBlock(in_channels_block=self.conv_block4.out_channels_block*2, out_channels_block=self.conv_block3.out_channels_block)
+        self.deconv_block3 = DeconvolutionalBlock(in_channels_block=self.conv_block3.out_channels_block*2, out_channels_block=self.conv_block2.out_channels_block)
+        self.deconv_block2 = DeconvolutionalBlock(in_channels_block=self.conv_block2.out_channels_block*2, out_channels_block=self.conv_block.out_channels_block)
+        self.deconv_block = DeconvolutionalBlock(in_channels_block=self.conv_block.out_channels_block*2, out_channels_block=input_channels)
         self.loss_fn = nn.MSELoss()  # Usando Mean Squared Error (MSE) para la reconstrucción
         self.training_step_outputs = []
         self.validation_step_outputs = []
@@ -94,11 +129,19 @@ class Autoencoder(pl.LightningModule):
         saved_skip_connection3 = self.conv_block3.skip_connection
 
         # (batch_size, 64, 28, 28)
-        x = self.conv_block4(x)
+        """ x = self.conv_block4(x)
         saved_skip_connection4 = self.conv_block4.skip_connection
+
+
+        x = self.conv_block5(x)
+        saved_skip_connection5 = self.conv_block5.skip_connection """
+
+        if self.use_inception_module:
+            x = F.leaky_relu(self.inceptionModule(x))
+            x = F.leaky_relu(self.inceptionModule2(x))
         
-        # (batch_size, 768, 14, 14)
-        x = self.deconv_block4(x, saved_skip_connection4)
+        #x = self.deconv_block5(x, saved_skip_connection5)
+        #x = self.deconv_block4(x, saved_skip_connection4)
         x = self.deconv_block3(x, saved_skip_connection3)
         x = self.deconv_block2(x, saved_skip_connection2)
         x = self.deconv_block(x, saved_skip_connection)
@@ -127,38 +170,45 @@ class Autoencoder(pl.LightningModule):
     def on_train_epoch_end(self):
         avg_loss = torch.stack(self.training_step_outputs).mean()
         print(f'Epoch {self.current_epoch}, Training Loss: {avg_loss.item()}', end=None)
-        self.log('train_loss', avg_loss.item())
+        self.log('train_loss', avg_loss.item(), on_step=False)
         self.training_step_outputs.clear()
     
     def on_validation_epoch_end(self):
         avg_loss = torch.stack(self.validation_step_outputs).mean()
         print(f'Epoch {self.current_epoch}, Validation Loss: {avg_loss.item()}', end=None)
-        self.log('validation_loss', avg_loss.item())
+        self.log('validation_loss', avg_loss.item(), on_step=False)
         self.validation_step_outputs.clear()
 
-        
-        self.save_reconstructed_images()
+        if self.current_epoch % 2:
+            self.save_reconstructed_images()
     
     def on_testing_epoch_end(self):
         avg_loss = torch.stack(self.testing_step_outputs).mean()
         print(f'Epoch {self.current_epoch}, Testing Loss: {avg_loss.item()}', end=None)
-        self.log('test_loss', avg_loss.item())
+        self.log('test_loss', avg_loss.item(), on_step=False)
         self.testing_step_outputs.clear()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
-        scheduler = StepLR(optimizer, step_size=20, gamma=0.1, verbose=True)
-        #scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5, verbose=True)
-        return {
-            'optimizer': optimizer,
-            'lr_scheduler': {
-                'scheduler': scheduler
-            }
+        
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.training_parameters.LEARNING_RATE)
+        scheduler = {
+            'scheduler': ReduceLROnPlateau(
+                optimizer,
+                mode='min',
+                factor=0.7,
+                patience=5,
+                threshold=self.training_parameters.THRESLHOLD_OPTIMIZER_DECREASE,
+                min_lr = self.training_parameters.MIN_LEARNING_RATE,
+                verbose=True
+            ),
+            'monitor': 'validation_loss'
         }
+        return [optimizer], [scheduler]
 
     def save_reconstructed_images(self):
         # Assuming you have a validation data loader available
         val_loader = self.trainer.datamodule.val_dataloader()
+        
         batch = next(iter(val_loader))
         x, _ = batch
         x = x.to(self.device)
